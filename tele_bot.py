@@ -1,15 +1,57 @@
+import logging
 import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    ContextTypes,
+    CommandHandler,
+    MessageHandler,
+    filters,
+)
 
-TOKEN = os.getenv("8525944078:AAEtICQDqJcX5VCgMepLUMHQ78L7eN0Unlo")
+from core import get_bot_reply
 
-app = ApplicationBuilder().token(TOKEN).build()
+# =============================
+# LOGGING
+# =============================
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-async def reply(update: Update, context):
-    await update.message.reply_text("Bot aktif 24/7 🚀")
+# =============================
+# ENV
+# =============================
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-app.add_handler(MessageHandler(filters.TEXT, reply))
+if not TOKEN:
+    raise RuntimeError("❌ TELEGRAM_BOT_TOKEN belum diset di Railway")
 
-print("Bot sedang berjalan...")
-app.run_polling()
+# =============================
+# HANDLERS
+# =============================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Halo! Bot Telegram Python kamu sudah aktif 🚀"
+    )
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text
+    reply = get_bot_reply(user_text)
+    await update.message.reply_text(reply)
+
+# =============================
+# MAIN
+# =============================
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    logger.info("🤖 Bot started. Polling...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
